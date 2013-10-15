@@ -28,82 +28,85 @@ type Point struct {
 	cluster int
 }
 
-func pointInSlice( point Point, points []Point ) bool {
-//	for i, _ := range points {
-//		if point.items == points[i].items {
-//		}
-//	}
-	return false
-}
-
-func regionQuery( point Point, points []Point, epsilon float64) []Point {
-
+func regionQuery( point Point, points []Point, epsilon float64 ) []Point {
 	neighborPoints := make( []Point, 0 )
-
 	for i, _ := range points {
-		distance := euclideanDistance( point, points[i]  )
-		if distance < epsilon {
+		distance := euclideanDistance( point, points[i] )
+		if ( distance < epsilon && distance != 0 ) {
 			neighborPoints = append( neighborPoints, points[i] )
 		}
 	}
-
 	return neighborPoints
-
 }
 
-func expandCluster( point Point, neighborPoints []Point, allPoints []Point, currentCluster int, epsilon float64, minPoints int ) []Point {
-
+func expandCluster( point Point, neighborPoints []Point, points []Point, currentClusterN int, epsilon float64,  minPoints int ) []Point {
 	clusterPoints := make( []Point, 0 )
 
 	for i, _ := range neighborPoints {
-
-		if !neighborPoints[i].visited {
-
+		if( !neighborPoints[i].visited ) {
 			neighborPoints[i].visited = true
 			newPoints := make( []Point, 0 )
-			newPoints = regionQuery( point, allPoints, epsilon )
-			if len( newPoints ) >= minPoints {
+			newPoints = regionQuery( point, points, epsilon )
+			if( len( newPoints) >= minPoints ) {
 				for n, _ := range newPoints {
 					neighborPoints = append( neighborPoints, newPoints[n] )
 				}
 			}
 		}
 
-		if neighborPoints[i].cluster == 0 {
+		if( neighborPoints[i].cluster == 0 ) {
 			clusterPoints = append( clusterPoints, neighborPoints[i] )
-			neighborPoints[i].cluster = currentCluster
+			neighborPoints[i].cluster = currentClusterN
 		}
-
 	}
 
 	return clusterPoints
-
 }
 
 func dbscan( data [][]float64, epsilon float64, minPoints int ) [][]Point {
 
 	fmt.Println("DBSCAN")
 
-	points, currentClusterN := make( []Point, len(data) ), 0
-	clusters := make( [][]Point, 10 )
+	points := make( []Point, len(data) )
+        currentClusterN := -1
+	clusters := make( [][]Point, 1 )
 
 	for i, _ := range data {
 		points[i] = Point{ data[i], false, 0 }
 	}
 
-	for i, _ := range points {
-		if !points[i].visited {
+        for i, _ := range points {
+		if( !points[i].visited ) {
+
 			points[i].visited = true
+
 			var neighborPoints []Point = regionQuery( points[i], points, epsilon )
+
 			if len(neighborPoints) >= minPoints {
 				currentClusterN += 1
 				points[i].cluster = currentClusterN
-				clusters[ currentClusterN ] = expandCluster( points[i], neighborPoints, points, currentClusterN, epsilon, minPoints )
+
+				//cluster := make( []Point, 0 )
+				//cluster = append( cluster, points[i] )
+				//clusters[ currentClusterN ] = cluster
+
+				var cluster = make( []Point, 0 )
+				cluster = append( cluster, points[i] )
+				cluster = expandCluster( points[i], neighborPoints, points, currentClusterN, epsilon, minPoints )
+
+				clusters = append( clusters, cluster )
+
+				//fmt.Println( clusters )
 			} else {
 				clusters[ 0 ] = append( clusters[0], points[i] )
 			}
 		}
+
+//		fmt.Println( regionQuery( points[i], points, epsilon ) )
 	}
+
+        //fmt.Println( clusters )
+	//fmt.Println( regionQuery( points[3], points, epsilon ) )
 
 	return clusters
 
@@ -111,7 +114,7 @@ func dbscan( data [][]float64, epsilon float64, minPoints int ) [][]Point {
 
 func main() {
 
-	data := make( [][]float64, 9 )
+	data := make( [][]float64, 11 )
 
 
 	data[0] = []float64 { 0.0, 10.0, 20.0 }
@@ -123,8 +126,10 @@ func main() {
 	data[6] = []float64 { 58.0, 79.0, 100.0 }
 	data[7] = []float64 { 58.0, 76.0, 102.0 }
 	data[8] = []float64 { 300.0, 70.0, 20.0 }
+        data[9] = []float64 { 500.0, 300.0, 202.0 }
+        data[10] = []float64 {  500.0, 302.0, 204.0 }
 
-	var output [][]Point = dbscan( data, 4.0, 1 )
+	var output [][]Point = dbscan( data, 4.0, 2 )
 
 	for i, _ := range output {
 		fmt.Println( "Cluster #", i )
